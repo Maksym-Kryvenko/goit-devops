@@ -61,3 +61,15 @@ else
     python3 -m pip install --user django
     echo "django: $(python3 -m django --version)"
 fi
+
+# Start project with Docker Compose
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
+
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "docker-compose.yaml not found at $SCRIPT_DIR, skipping"
+else
+    echo "Starting services with Docker Compose..."
+    docker compose -f "$COMPOSE_FILE" up -d
+    echo "Services started. Open http://localhost in your browser."
+fi

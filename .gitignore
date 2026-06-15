@@ -1,1 +1,18 @@
+# Environment
+.env
+
+# Python
 *.swp
+*.pyc
+__pycache__/
+*.pyo
+.venv/
+
+# Django
+*.log
+
+# macOS
+.DS_Store
+
+# Docker volumes (if ever mounted locally)
+postgres_data/
