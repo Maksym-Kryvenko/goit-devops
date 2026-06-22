@@ -3,3 +3,9 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "table_name" {
+  description = "Ім'я DynamoDB-таблиці для блокування стейтів"
+  type        = string
+  default     = "terraform-locks"
+}
+
