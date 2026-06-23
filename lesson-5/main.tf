@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.0" # Мінімальна версія Terraform
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws" # Офіційний провайдер AWS
+      version = "~> 6.0"        # Будь-яка версія 6.x
+    }
+  }
+}
+
 provider "aws" {
   region = "eu-north-1"
 }
