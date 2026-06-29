@@ -1,0 +1,47 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.config.POSTGRES_HOST }}
+  labels:
+    app: {{ .Values.config.POSTGRES_HOST }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.config.POSTGRES_HOST }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.config.POSTGRES_HOST }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image }}"
+          ports:
+            - containerPort: 5432
+          # POSTGRES_USER / POSTGRES_DB / POSTGRES_PASSWORD з того ж ConfigMap
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}        # ephemeral — для homework достатньо
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.config.POSTGRES_HOST }}
+  labels:
+    app: {{ .Values.config.POSTGRES_HOST }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.config.POSTGRES_HOST }}
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

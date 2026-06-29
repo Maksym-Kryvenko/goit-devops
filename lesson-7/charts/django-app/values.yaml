@@ -2,7 +2,7 @@
 image:
   repository: 495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always   # tag=latest -> завжди тягнути свіжий образ
 
 # Кількість реплік за замовчуванням (діє коли autoscaling вимкнено)
 replicaCount: 2
@@ -32,6 +32,11 @@ resources:
     cpu: 500m
     memory: 256Mi
 
+# Postgres у кластері (host = config.POSTGRES_HOST). Для homework — emptyDir.
+postgres:
+  enabled: true
+  image: postgres:14
+
 # Змінні середовища (перенесені з topic 4 .env) -> ConfigMap -> envFrom
 config:
   POSTGRES_HOST: db
@@ -39,3 +44,5 @@ config:
   POSTGRES_USER: django_user
   POSTGRES_DB: django_db
   POSTGRES_PASSWORD: your_password_here
+  ALLOWED_HOSTS: "*"
+  DEBUG: "False"

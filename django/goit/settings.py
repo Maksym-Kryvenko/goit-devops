@@ -24,9 +24,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-n*0a^$*(up4zcqe(l(3af0kaiuc!(l(-egt@)*72oih7nu$cy0'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django', 'django_app']
+# Хости беремо з env (ConfigMap у k8s), кома-розділені; за замовч. — локальні
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1,django,django_app'
+).split(',')
 
 
 # Application definition
