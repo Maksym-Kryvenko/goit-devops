@@ -1,0 +1,41 @@
+# Образ Django з ECR
+image:
+  repository: 495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Кількість реплік за замовчуванням (діє коли autoscaling вимкнено)
+replicaCount: 2
+
+# Порт контейнера Django
+containerPort: 8000
+
+# Service типу LoadBalancer для зовнішнього доступу
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+
+# HPA: масштабування подів від 2 до 6 при навантаженні CPU > 70%
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# Запити/ліміти ресурсів (потрібні HPA для розрахунку % CPU)
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Змінні середовища (перенесені з topic 4 .env) -> ConfigMap -> envFrom
+config:
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: django_user
+  POSTGRES_DB: django_db
+  POSTGRES_PASSWORD: your_password_here
