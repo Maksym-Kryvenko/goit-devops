@@ -1,107 +1,93 @@
-# Lesson 5 — Terraform Infrastructure on AWS
+# Lesson 7 — Kubernetes (EKS) + ECR + Helm
 
-Terraform-проєкт, що піднімає базову інфраструктуру в AWS: віддалене зберігання
-стейтів (S3 + DynamoDB), мережу (VPC) та реєстр Docker-образів (ECR).
+Terraform піднімає EKS-кластер у наявній VPC, ECR-репозиторій для Docker-образу
+Django, а Helm-чарт деплоїть застосунок із Service `LoadBalancer`, HPA (2→6) та
+ConfigMap зі змінними середовища.
 
-## Структура проєкту
+## Структура
 
 ```
-lesson-5/
-├── main.tf                 # Підключення всіх модулів + provider
-├── backend.tf              # Backend конфіг для стейтів (S3 + DynamoDB lock)
-├── outputs.tf              # Загальний вивід ресурсів усіх модулів
-├── README.md               # Документація
+lesson-7/
+├── main.tf                 # Підключення модулів + provider
+├── backend.tf              # S3 + DynamoDB backend для стейту
+├── outputs.tf              # Загальні outputs
 │
-└── modules/
-    ├── s3-backend/         # S3-бакет + DynamoDB для стейтів
-    │   ├── s3.tf           # Бакет, версіонування, ownership
-    │   ├── dynamodb.tf     # Таблиця блокування стейтів
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    ├── vpc/                # Мережева інфраструктура
-    │   ├── vpc.tf          # VPC, 3 public + 3 private subnets, IGW
-    │   ├── routes.tf       # Route tables, NAT Gateway, маршрути
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    └── ecr/                # Реєстр Docker-образів
-        ├── ecr.tf          # Репозиторій, scan-on-push, політики
-        ├── variables.tf
-        └── outputs.tf
+├── modules/
+│   ├── s3-backend/         # S3-бакет + DynamoDB для стейту
+│   ├── vpc/                # VPC, 3 public + 3 private subnets, IGW, NAT
+│   ├── ecr/                # ECR-репозиторій (scan-on-push, lifecycle)
+│   └── eks/                # EKS-кластер + Node Group + IAM-ролі
+│
+└── charts/django-app/      # Helm-чарт
+    ├── Chart.yaml
+    ├── values.yaml         # image, service, config(env), autoscaling
+    └── templates/
+        ├── deployment.yaml # Django image з ECR + envFrom ConfigMap
+        ├── service.yaml    # type: LoadBalancer
+        ├── configmap.yaml  # env-змінні (з topic 4)
+        └── hpa.yaml        # CPU > 70%, 2→6 podів
 ```
 
-## Модулі
-
-### `s3-backend`
-Зберігає стейт-файли Terraform віддалено та безпечно.
-- **S3-бакет** з увімкненим **версіонуванням** — історія всіх змін стейту.
-- **DynamoDB-таблиця** (`terraform-locks`, hash key `LockID`) — блокує стейт під
-  час `apply`, щоб двоє людей не змінювали інфраструктуру одночасно.
-- **Outputs:** ім'я та ARN бакета, ім'я DynamoDB-таблиці.
-
-### `vpc`
-Мережева основа для решти ресурсів.
-- **VPC** з CIDR `10.0.0.0/16`, увімкнені DNS support/hostnames.
-- **3 публічні підмережі** — мають публічний IP, вихід в інтернет через **Internet Gateway**.
-- **3 приватні підмережі** — без вхідного доступу, вихід в інтернет через **NAT Gateway** (з Elastic IP).
-- **Route Tables** — окремі для public (→ IGW) і private (→ NAT).
-- **Outputs:** ID VPC, списки ID public/private підмереж, ID IGW.
-
-### `ecr`
-Приватний реєстр Docker-образів.
-- **ECR-репозиторій** з **scan-on-push** — автоскан образів на вразливості.
-- **Шифрування** образів (AES256) у спокої.
-- **Repository policy** — дозвіл push/pull для акаунта.
-- **Lifecycle policy** — лишає останні 10 образів, старі видаляє (економія).
-- **Outputs:** URL, ARN, ім'я репозиторію.
-
-## Команди
+## 1. Terraform — інфраструктура
 
 ```bash
-terraform init       # Ініціалізація, завантаження провайдерів, підключення backend
-terraform plan       # Перегляд змін перед застосуванням
-terraform apply      # Створення/оновлення ресурсів в AWS
-terraform destroy    # Видалення всіх ресурсів
+terraform init
+terraform plan
+terraform apply
 ```
 
-## Важливо: bootstrap backend
+Створює VPC, ECR, EKS-кластер та Node Group. Outputs: endpoint кластера,
+ім'я кластера, URL ECR.
 
-`backend.tf` посилається на S3-бакет і DynamoDB-таблицю, які створює модуль
-`s3-backend`. На першому запуску ці ресурси ще не існують, тому порядок такий:
+## 2. Доступ через kubectl
 
-1. Тимчасово закоментувати блок `backend "s3"` у `backend.tf`.
-2. `terraform init && terraform apply` — створює бакет + таблицю (стейт локально).
-3. Розкоментувати `backend "s3"`.
-4. `terraform init` — Terraform запропонує перенести стейт у S3, відповісти `yes`.
-
-> **Примітка про lock-таблицю.** Якщо `dynamodb_table` у backend вказує на ще
-> не створену таблицю, перший `apply` запускається з `-lock=false` (саме він
-> створює `terraform-locks`). Після цього блокування працює автоматично.
-
-## Результат (terraform apply)
-
-```text
-Apply complete! Resources: 24 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-dynamodb_table_name = "terraform-locks"
-ecr_repository_url  = "495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr"
-private_subnets = [
-  "subnet-0b69dfb3d5776f034",
-  "subnet-0b9701dad6f2e534c",
-  "subnet-017907171803f9516",
-]
-public_subnets = [
-  "subnet-04ff8bb5da7638d0c",
-  "subnet-012b88ff83b1d142b",
-  "subnet-0ca47b1959cf04022",
-]
-s3_bucket_name = "terraform-state-mkryvenko-21062026"
-vpc_id         = "vpc-05ff1f393769e5d29"
+```bash
+aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo
+kubectl get nodes
 ```
 
-Створено 24 ресурси: VPC з 3 публічними + 3 приватними підмережами, Internet
-Gateway, NAT Gateway, маршрутні таблиці, DynamoDB-таблиця блокування та
-ECR-репозиторій. Стейт зберігається в S3 з блокуванням через DynamoDB.
+## 3. Білд та пуш образу в ECR
+
+```bash
+ACCOUNT=495403531175
+REGION=eu-north-1
+REPO=lesson-5-ecr
+ECR=$ACCOUNT.dkr.ecr.$REGION.amazonaws.com
+
+# Логін у ECR
+aws ecr get-login-password --region $REGION \
+  | docker login --username AWS --password-stdin $ECR
+
+# Білд із Dockerfile з topic 4 (django/) і пуш
+docker build -t $REPO ../django
+docker tag $REPO:latest $ECR/$REPO:latest
+docker push $ECR/$REPO:latest
+```
+
+> Для Apple Silicon білд під amd64 (ноди EKS x86):
+> `docker build --platform linux/amd64 -t $REPO ../django`
+
+## 4. Деплой через Helm
+
+```bash
+helm install django-app ./charts/django-app
+# або оновлення:
+helm upgrade --install django-app ./charts/django-app
+
+kubectl get pods
+kubectl get svc django-app-django   # EXTERNAL-IP = адреса LoadBalancer
+kubectl get hpa
+```
+
+`values.yaml` містить:
+- **image** — URL ECR + tag,
+- **service** — `LoadBalancer`, port 80 → 8000,
+- **config** — env-змінні (POSTGRES_*) → ConfigMap → `envFrom`,
+- **autoscaling** — `minReplicas: 2`, `maxReplicas: 6`, CPU 70%.
+
+## Примітки
+
+- HPA рахує % CPU від `resources.requests.cpu`, тому в чарті заданий requests.
+  Для роботи HPA в кластері має бути встановлений **metrics-server**.
+- Node Group за замовчуванням малий (`t2.micro`, 1 нода). Для 2–6 podів Django
+  + системних podів збільш `instance_type`/`desired_size` у `main.tf`.
