@@ -38,11 +38,15 @@ module "ecr" {
 }
 
 module "eks" {
-  source          = "./modules/eks"          
-  cluster_name    = "eks-cluster-demo"            # Назва кластера
-  subnet_ids      = module.vpc.public_subnets     # ID підмереж
-  instance_type   = "t3.small"                    # Тип інстансів (вистачає ENI на 6 podів + системні)
-  desired_size    = 2                             # Бажана кількість нодів
-  max_size        = 3                             # Максимальна кількість нодів
-  min_size        = 1                             # Мінімальна кількість нодів
+  source       = "./modules/eks"
+  cluster_name = "eks-cluster-demo" # Назва кластера
+  # Кластеру віддаємо публічні + приватні підмережі: control-plane ENI живуть будь-де,
+  # а внутрішній cloud-controller обирає ПУБЛІЧНІ підмережі для internet-facing LoadBalancer.
+  subnet_ids = concat(module.vpc.public_subnets, module.vpc.private_subnets)
+  # Воркер-ноди — ЛИШЕ в приватних підмережах (вихід в інтернет через NAT Gateway).
+  node_subnet_ids = module.vpc.private_subnets
+  instance_type   = "t3.small" # Тип інстансів (вистачає ENI на 6 podів + системні)
+  desired_size    = 2          # Бажана кількість нодів
+  max_size        = 3          # Максимальна кількість нодів
+  min_size        = 1          # Мінімальна кількість нодів
 }
