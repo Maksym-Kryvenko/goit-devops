@@ -23,6 +23,23 @@ autoscaling:
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
 
+# Health-check проби для Django-контейнера.
+probes:
+  readiness:
+    tcpSocket:
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    tcpSocket:
+      port: 8000
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 3
+
 # Запити/ліміти ресурсів (потрібні HPA для розрахунку % CPU)
 resources:
   requests:
@@ -37,12 +54,16 @@ postgres:
   enabled: true
   image: postgres:14
 
-# Змінні середовища (перенесені з topic 4 .env) -> ConfigMap -> envFrom
+# Несекретні змінні середовища -> ConfigMap -> envFrom
 config:
   POSTGRES_HOST: db
   POSTGRES_PORT: "5432"
   POSTGRES_USER: django_user
   POSTGRES_DB: django_db
-  POSTGRES_PASSWORD: your_password_here
   ALLOWED_HOSTS: "*"
   DEBUG: "False"
+
+# Секретні значення -> Secret (kind: Secret) -> envFrom.
+secrets:
+  secretKey: "django-insecure-CHANGE-ME"
+  postgresPassword: "your_password_here"

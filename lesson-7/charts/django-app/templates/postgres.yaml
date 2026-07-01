@@ -20,10 +20,12 @@ spec:
           image: "{{ .Values.postgres.image }}"
           ports:
             - containerPort: 5432
-          # POSTGRES_USER / POSTGRES_DB / POSTGRES_PASSWORD з того ж ConfigMap
+          # POSTGRES_USER / POSTGRES_DB з ConfigMap, POSTGRES_PASSWORD — із Secret
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data

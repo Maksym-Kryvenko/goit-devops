@@ -22,9 +22,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.containerPort }}
-          # Підключаємо всі змінні з ConfigMap через envFrom
+          # Несекретні змінні — з ConfigMap, секретні (SECRET_KEY, POSTGRES_PASSWORD) — із Secret
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
