@@ -26,10 +26,9 @@ spec:
     }
 
     environment {
-        // ECR registry host. Replace <ACCOUNT_ID> with the real 12-digit AWS account id
-        // at deploy time (e.g. via a Jenkins global env / seed value). The current repo's
-        // charts/django-app/values.yaml uses account 495403531175 in eu-north-1.
-        ECR_REGISTRY = "<ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com"
+        // ECR registry host — AWS account 495403531175, region eu-north-1
+        // (matches charts/django-app/values.yaml image.repository).
+        ECR_REGISTRY = "495403531175.dkr.ecr.eu-north-1.amazonaws.com"
         IMAGE_NAME   = "lesson-5-ecr"
         IMAGE_TAG    = "v1.0.${BUILD_NUMBER}"
         GIT_REPO     = "github.com/Maksym-Kryvenko/goit-devops.git"
