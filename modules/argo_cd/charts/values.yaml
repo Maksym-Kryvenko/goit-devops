@@ -1,28 +1,26 @@
 applications:
-  - name: example-app
+  - name: django-app
     namespace: default
     project: default
     source:
-      repoURL: <https://github.com/YOUR_USERNAME/example-repo.git>
-      path: django-chart
+      repoURL: https://github.com/Maksym-Kryvenko/goit-devops.git
+      path: charts/django-app
       targetRevision: main
       helm:
         valueFiles:
           - values.yaml
     destination:
-      server: <https://kubernetes.default.svc>
+      server: https://kubernetes.default.svc
       namespace: default
     syncPolicy:
       automated:
         prune: true
         selfHeal: true
+      syncOptions:
+        - CreateNamespace=true
 
 repositories:
-  - name: example-app
-    url: <https://github.com/YOUR_USERNAME/example-repo.git>
-    username: YOUR_USERNAME
-    password: YOUR_PASS
-
-repoConfig:
-  insecure: "true"
-  enableLfs: "true"
+  - name: goit-devops
+    url: https://github.com/Maksym-Kryvenko/goit-devops.git
+    username: ""
+    password: ""

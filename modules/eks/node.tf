@@ -42,10 +42,10 @@ resource "aws_iam_role_policy_attachment" "amazon_ec2_container_registry_read_on
 resource "aws_eks_node_group" "general" {
   # Ім'я EKS-кластера
   cluster_name = aws_eks_cluster.eks.name
-  
+
   # Ім'я групи вузлів
   node_group_name = "general"
-  
+
   # IAM-роль для вузлів
   node_role_arn = aws_iam_role.nodes.arn
 
@@ -58,19 +58,19 @@ resource "aws_eks_node_group" "general" {
 
   # Конфігурація масштабування
   scaling_config {
-    desired_size = var.desired_size  # Бажана кількість вузлів
-    max_size     = var.max_size      # Максимальна кількість вузлів
-    min_size     = var.min_size      # Мінімальна кількість вузлів
+    desired_size = var.desired_size # Бажана кількість вузлів
+    max_size     = var.max_size     # Максимальна кількість вузлів
+    min_size     = var.min_size     # Мінімальна кількість вузлів
   }
 
   # Конфігурація оновлення вузлів
   update_config {
-    max_unavailable = 1  # Максимальна кількість вузлів, які можна оновлювати одночасно
+    max_unavailable = 1 # Максимальна кількість вузлів, які можна оновлювати одночасно
   }
 
   # Додає мітки до вузлів
   labels = {
-    role = "general"  # Тег "role" зі значенням "general"
+    role = "general" # Тег "role" зі значенням "general"
   }
 
   # Залежності для створення Node Group

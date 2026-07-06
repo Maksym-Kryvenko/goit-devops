@@ -8,8 +8,8 @@ resource "kubernetes_storage_class_v1" "ebs_sc" {
 
   storage_provisioner = "ebs.csi.aws.com"
 
-  reclaim_policy       = "Delete"
-  volume_binding_mode  = "WaitForFirstConsumer"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
 
   parameters = {
     type = "gp3"
@@ -78,7 +78,7 @@ resource "aws_iam_role_policy" "jenkins_ecr_policy" {
 resource "helm_release" "jenkins" {
   name             = "jenkins"
   namespace        = "jenkins"
-  repository       = "<https://charts.jenkins.io>"
+  repository       = "https://charts.jenkins.io"
   chart            = "jenkins"
   version          = "5.8.27"
   create_namespace = true

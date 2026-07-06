@@ -6,11 +6,41 @@ terraform {
       source  = "hashicorp/aws" # Офіційний провайдер AWS
       version = "~> 6.0"        # Будь-яка версія 6.x
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.20"
+    }
   }
 }
 
 provider "aws" {
   region = "eu-north-1"
+}
+
+data "aws_eks_cluster" "cluster" {
+  name = module.eks.eks_cluster_name
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.eks_cluster_name
+}
+
+provider "kubernetes" {
+  host                   = module.eks.eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
+  }
 }
 
 # Підключаємо модуль для S3 та DynamoDB
@@ -52,16 +82,24 @@ module "eks" {
 }
 
 module "jenkins" {
-  source       = "./modules/jenkins"
-  eks_cluster_name = module.eks.eks_cluster_name
+  source            = "./modules/jenkins"
+  eks_cluster_name  = module.eks.eks_cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
 
   providers = {
-    helm = helm
+    helm       = helm
+    kubernetes = kubernetes
   }
 }
 
 module "argo_cd" {
-  source       = "./modules/argo-cd"
-  namespace    = "argocd"
+  source        = "./modules/argo_cd"
+  namespace     = "argocd"
   chart_version = "5.46.4"
+
+  providers = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
 }
