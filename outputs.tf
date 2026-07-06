@@ -54,3 +54,14 @@ output "eks_node_role_arn" {
   value       = module.eks.eks_node_role_arn
 }
 
+#-------------Jenkins-----------------
+
+output "jenkins_release_name" {
+  description = "Name of the Jenkins release"
+  value       = module.jenkins.jenkins_release_name
+}
+
+output "jenkins_namespace" {
+  description = "Namespace of the Jenkins release"
+  value       = module.jenkins.jenkins_namespace
+}
