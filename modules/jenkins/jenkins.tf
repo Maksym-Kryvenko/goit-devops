@@ -16,19 +16,6 @@ resource "kubernetes_storage_class_v1" "ebs_sc" {
   }
 }
 
-resource "kubernetes_service_account" "jenkins_sa" {
-  metadata {
-    name      = "jenkins-sa"
-    namespace = "jenkins"
-    annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.jenkins_kaniko_role.arn
-    }
-  }
-  depends_on = [
-    helm_release.jenkins
-  ]
-}
-
 resource "aws_iam_role" "jenkins_kaniko_role" {
   name = "${var.eks_cluster_name}-jenkins-kaniko-role"
 
@@ -84,7 +71,9 @@ resource "helm_release" "jenkins" {
   create_namespace = true
 
   values = [
-    file("${path.module}/values.yaml")
+    templatefile("${path.module}/values.yaml", {
+      kaniko_role_arn = aws_iam_role.jenkins_kaniko_role.arn
+    })
   ]
 
 }

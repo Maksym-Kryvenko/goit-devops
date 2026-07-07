@@ -2,3 +2,6 @@ server:
   service:
     type: LoadBalancer
     port: 443
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: ssl
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
