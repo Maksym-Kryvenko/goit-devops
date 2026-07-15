@@ -71,6 +71,7 @@ Configuration lives at the repository root: `main.tf` (providers + module wiring
 | **eks** | `modules/eks` | EKS cluster `eks-cluster-demo`, managed node group (`t3.small`, 1-3 nodes), OIDC provider, EBS CSI driver + default `gp3` storage class |
 | **jenkins** | `modules/jenkins` | Jenkins via Helm; `jenkins-sa` service account with IRSA role granting ECR push (Kaniko) |
 | **argo_cd** | `modules/argo_cd` | Argo CD via Helm + an app-of-apps chart declaring the `django-app` Application (repo, path `charts/django-app`, revision `main`) with auto-sync |
+| **rds** | `modules/rds` | Flexible database module — Aurora cluster **or** standard RDS instance via `use_aurora`; always creates subnet group, security group, and parameter group (see [§10](#10-rds-database-module)) |
 
 The `helm` and `kubernetes` providers in `main.tf` authenticate to the cluster using
 `module.eks` outputs (endpoint, CA cert, auth token) — which is why the cluster must exist
@@ -216,3 +217,145 @@ aws ecr batch-delete-image --repository-name lesson-5-ecr --region eu-north-1 \
 
 > Also verify no orphaned LoadBalancers or EBS volumes remain in the AWS console
 > (`eu-north-1`) after destroy, as these continue to incur charges.
+
+## 10. RDS Database Module
+
+A universal, reusable database module (`modules/rds`) that provisions **either** a standard
+`aws_db_instance` **or** an **Aurora cluster** based on a single flag, `use_aurora`.
+
+In both modes it always creates a **DB Subnet Group** (`aws_db_subnet_group`), a
+**Security Group** (`aws_security_group`, ingress on the DB port from configurable CIDRs),
+and a **Parameter Group** seeded with `max_connections`, `log_statement`, and `work_mem`.
+
+| `use_aurora` | Resources created |
+|--------------|-------------------|
+| `false`      | `aws_db_instance` + `aws_db_parameter_group` |
+| `true`       | `aws_rds_cluster` + 1 writer + `aurora_replica_count` readers + `aws_rds_cluster_parameter_group` |
+
+### 10.1 Usage
+
+**Aurora cluster (`use_aurora = true`):**
+
+```hcl
+module "rds" {
+  source = "./modules/rds"
+
+  name       = "myapp-db"
+  use_aurora = true
+
+  # Aurora engine
+  engine_cluster                = "aurora-postgresql"
+  engine_version_cluster        = "15.3"
+  parameter_group_family_aurora = "aurora-postgresql15"
+  aurora_replica_count          = 1
+
+  # Common
+  instance_class = "db.t3.medium"
+  db_name        = "myapp"
+  username       = "postgres"
+  password       = var.db_password # keep secrets out of code
+
+  vpc_id              = module.vpc.vpc_id
+  subnet_private_ids  = module.vpc.private_subnets
+  subnet_public_ids   = module.vpc.public_subnets
+  publicly_accessible = false
+
+  parameters = {
+    max_connections = "200"
+    log_statement   = "all"
+    work_mem        = "4096"
+  }
+
+  tags = { Environment = "dev", Project = "myapp" }
+}
+```
+
+**Standard RDS instance (`use_aurora = false`):**
+
+```hcl
+module "rds" {
+  source = "./modules/rds"
+
+  name       = "myapp-db"
+  use_aurora = false
+
+  engine                     = "postgres"
+  engine_version             = "17.2"
+  parameter_group_family_rds = "postgres17"
+
+  instance_class    = "db.t3.micro"
+  allocated_storage = 20
+  multi_az          = true
+  db_name           = "myapp"
+  username          = "postgres"
+  password          = var.db_password
+
+  vpc_id              = module.vpc.vpc_id
+  subnet_private_ids  = module.vpc.private_subnets
+  subnet_public_ids   = module.vpc.public_subnets
+  publicly_accessible = false
+
+  tags = { Environment = "dev" }
+}
+```
+
+### 10.2 Variables
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `string` | — (required) | Base name for the instance/cluster and derived resources |
+| `use_aurora` | `bool` | `false` | `true` → Aurora cluster; `false` → single RDS instance |
+| `engine` | `string` | `"postgres"` | Engine for the standard RDS instance (e.g. `postgres`, `mysql`) |
+| `engine_version` | `string` | `"14.7"` | Engine version for the standard RDS instance |
+| `parameter_group_family_rds` | `string` | `"postgres15"` | Parameter group family for the standard engine/version |
+| `engine_cluster` | `string` | `"aurora-postgresql"` | Engine for the Aurora cluster |
+| `engine_version_cluster` | `string` | `"15.3"` | Engine version for the Aurora cluster |
+| `parameter_group_family_aurora` | `string` | `"aurora-postgresql15"` | Cluster parameter group family |
+| `aurora_replica_count` | `number` | `1` | Number of Aurora reader replicas (in addition to the writer) |
+| `instance_class` | `string` | `"db.t3.micro"` | Instance class for the instance / cluster members |
+| `allocated_storage` | `number` | `20` | Storage in GB (standard RDS only; Aurora auto-scales) |
+| `multi_az` | `bool` | `false` | Multi-AZ for the standard RDS instance |
+| `publicly_accessible` | `bool` | `false` | If `true`, uses public subnets; otherwise private subnets |
+| `backup_retention_period` | `number` | `7` | Days to retain automated backups |
+| `db_name` | `string` | — (required) | Name of the initial database |
+| `username` | `string` | — (required) | Master username |
+| `password` | `string` (sensitive) | — (required) | Master password |
+| `vpc_id` | `string` | — (required) | VPC ID for the security group |
+| `subnet_private_ids` | `list(string)` | — (required) | Private subnet IDs (used when not publicly accessible) |
+| `subnet_public_ids` | `list(string)` | — (required) | Public subnet IDs (used when publicly accessible) |
+| `db_port` | `number` | `5432` | DB listen port (5432 PostgreSQL, 3306 MySQL) |
+| `allowed_cidr_blocks` | `list(string)` | `["0.0.0.0/0"]` | CIDR blocks allowed to reach the DB on `db_port` |
+| `parameters` | `map(string)` | `{ max_connections = "200", log_statement = "all", work_mem = "4096" }` | DB parameters applied to the parameter group |
+| `tags` | `map(string)` | `{}` | Tags applied to all created resources |
+
+### 10.3 Outputs
+
+| Name | Description |
+|------|-------------|
+| `endpoint` | Writer endpoint (Aurora cluster endpoint or standard instance endpoint) |
+| `reader_endpoint` | Aurora reader endpoint; `null` when `use_aurora = false` |
+| `port` | Port the database listens on |
+| `db_name` | Name of the initial database |
+| `username` | Master username |
+| `identifier` | Identifier of the RDS instance or Aurora cluster |
+| `security_group_id` | ID of the security group attached to the database |
+| `subnet_group_name` | Name of the DB subnet group |
+| `parameter_group_name` | Name of the (cluster) parameter group in use |
+
+### 10.4 How to change the database type, engine, and instance class
+
+- **Switch Aurora ↔ standard RDS** — flip `use_aurora`. `true` builds an Aurora cluster
+  with a writer and `aurora_replica_count` readers; `false` builds a single `aws_db_instance`.
+  Subnet group, security group, and parameter group are created in both modes — no other change needed.
+- **Change the standard engine/version** — set `engine` (e.g. `postgres` → `mysql`),
+  `engine_version`, and the matching `parameter_group_family_rds` (e.g. `postgres17`, `mysql8.0`).
+  The family **must** match the engine major version or AWS rejects the parameter group.
+- **Change the Aurora engine/version** — set `engine_cluster` (`aurora-postgresql` / `aurora-mysql`),
+  `engine_version_cluster`, and the matching `parameter_group_family_aurora`
+  (e.g. `aurora-postgresql15`, `aurora-mysql8.0`).
+- **Change the instance class** — set `instance_class` (e.g. `db.t3.micro` → `db.t3.medium` →
+  `db.r6g.large`). Applies to the standard instance and to every Aurora cluster member.
+- **Change the DB port / access** — set `db_port` (`5432` PostgreSQL, `3306` MySQL) and restrict
+  `allowed_cidr_blocks` to your VPC/app CIDRs instead of the wide-open default.
+- **Tune parameters** — override the `parameters` map (`max_connections`, `log_statement`,
+  `work_mem`, …); applied to the standard or Aurora parameter group automatically.
