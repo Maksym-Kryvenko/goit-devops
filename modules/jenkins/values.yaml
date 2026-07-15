@@ -1,0 +1,67 @@
+controller:
+  admin:
+    username: admin
+    password: admin123
+
+  serviceType: LoadBalancer
+  servicePort: 80
+  service:
+    port: 80
+    targetPort: 8080
+
+  serviceAccount:
+    create: true
+    name: jenkins-sa
+    annotations:
+      eks.amazonaws.com/role-arn: "${kaniko_role_arn}"
+      
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+
+  persistentVolume:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+  
+  JCasC:
+    configScripts:
+      kubernetes-cloud: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "eks"
+                serverUrl: "https://kubernetes.default"
+                namespace: "jenkins"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+                directConnection: false
+                skipTlsVerify: true
+                podLabels:
+                  - key: "jenkins"
+                    value: "agent"
+                templates:
+                  - name: "kaniko"
+                    label: "kaniko"
+                    namespace: "jenkins"
+                    serviceAccount: "jenkins-sa"
+                    yamlMergeStrategy: "override"
+                    containers:
+                      - name: "kaniko"
+                        image: "gcr.io/kaniko-project/executor:debug"
+                        command: "sleep"
+                        args: "99d"
+                        ttyEnabled: true
+
+  installPlugins:
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - credentials-binding:latest
+    - github:latest
+    - kubernetes:latest
+
