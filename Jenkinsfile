@@ -25,6 +25,12 @@ spec:
         }
     }
 
+    // Poll the Git repo every minute; a new commit on final-project auto-starts a build.
+    // (Registered after Jenkins loads this Jenkinsfile once — run one build after adding it.)
+    triggers {
+        pollSCM('* * * * *')
+    }
+
     environment {
         // ECR registry host — AWS account 495403531175, region eu-north-1
         // (matches charts/django-app/values.yaml image.repository).
