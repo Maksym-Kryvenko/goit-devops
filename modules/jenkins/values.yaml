@@ -62,7 +62,7 @@ controller:
                           url('https://github.com/Maksym-Kryvenko/goit-devops.git')
                           credentials('github-token')
                         }
-                        branch('*/main')
+                        branch('*/final-project')
                       }
                     }
                     scriptPath('Jenkinsfile')

@@ -63,7 +63,7 @@ spec:
                         sh '''
                             set -e
                             rm -rf repo
-                            git clone https://$GIT_USER:$GIT_PAT@$GIT_REPO repo
+                            git clone -b final-project https://$GIT_USER:$GIT_PAT@$GIT_REPO repo
                             cd repo
 
                             sed -i "s|  tag:.*|  tag: $IMAGE_TAG|" charts/django-app/values.yaml
@@ -74,7 +74,7 @@ spec:
                             git add charts/django-app/values.yaml
                             # Guard against an empty diff so an unchanged tag does not fail the build.
                             git diff --cached --quiet || git commit -m "ci: update image tag to $IMAGE_TAG"
-                            git push origin main
+                            git push origin final-project
                         '''
                     }
                 }
