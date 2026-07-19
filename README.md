@@ -71,7 +71,8 @@ Configuration lives at the repository root: `main.tf` (providers + module wiring
 | **eks** | `modules/eks` | EKS cluster `eks-cluster-demo`, managed node group (`t3.small`, 1-3 nodes), OIDC provider, EBS CSI driver + default `gp3` storage class |
 | **jenkins** | `modules/jenkins` | Jenkins via Helm; `jenkins-sa` service account with IRSA role granting ECR push (Kaniko) |
 | **argo_cd** | `modules/argo_cd` | Argo CD via Helm + an app-of-apps chart declaring the `django-app` Application (repo, path `charts/django-app`, revision `main`) with auto-sync |
-| **rds** | `modules/rds` | Flexible database module — Aurora cluster **or** standard RDS instance via `use_aurora`; always creates subnet group, security group, and parameter group (see [§10](#10-rds-database-module)) |
+| **rds** | `modules/rds` | Flexible database module — Aurora cluster **or** standard RDS instance via `use_aurora`; always creates subnet group, security group, and parameter group (see [§11](#11-rds-database-module)) |
+| **monitoring** | `modules/monitoring` | `monitoring` namespace + Prometheus (`prometheus-community/prometheus`) and Grafana (`grafana/grafana`) via Helm; Grafana pre-provisioned with a Prometheus datasource and ready dashboards (see [§8](#8-monitoring-prometheus--grafana)) |
 
 The `helm` and `kubernetes` providers in `main.tf` authenticate to the cluster using
 `module.eks` outputs (endpoint, CA cert, auth token) — which is why the cluster must exist
@@ -173,7 +174,27 @@ Each build then: Kaniko builds `django/Dockerfile` and pushes
    is automated, so when Jenkins pushes the new image tag, Argo CD detects the drift and
    applies the updated Helm chart to the cluster automatically — no manual sync needed.
 
-## 8. Verification
+## 8. Monitoring (Prometheus + Grafana)
+
+The `monitoring` module installs Prometheus and Grafana into the `monitoring` namespace via
+Helm (two separate releases). Grafana is pre-provisioned with a Prometheus datasource
+(`http://prometheus-server.monitoring.svc:80`) and ready-made Kubernetes dashboards, so
+metrics are visible immediately after install.
+
+```bash
+# Verify the stack is up
+kubectl get all -n monitoring
+
+# Access Grafana (login: admin / admin123)
+kubectl port-forward -n monitoring svc/grafana 3000:80
+# open http://localhost:3000
+```
+
+Prometheus scrapes cluster/node/pod metrics; the pre-loaded dashboards (Kubernetes cluster,
+node-exporter) render them out of the box. The Grafana admin password is set via the
+`grafana_admin_password` module variable (default `admin123`).
+
+## 9. Verification
 
 ```bash
 # 1. New image tag pushed to ECR by the latest build
@@ -192,7 +213,7 @@ Confirm the committed `tag:` in `charts/django-app/values.yaml` matches the tag 
 on the pods (`kubectl get pods -o jsonpath='{..image}'`), and open the Django Service
 LoadBalancer URL to see the app.
 
-## 9. Teardown
+## 10. Teardown
 
 Destroy everything to stop billing. Because Argo CD manages workloads, remove the app first,
 then let Terraform tear down the rest.
@@ -218,7 +239,7 @@ aws ecr batch-delete-image --repository-name lesson-5-ecr --region eu-north-1 \
 > Also verify no orphaned LoadBalancers or EBS volumes remain in the AWS console
 > (`eu-north-1`) after destroy, as these continue to incur charges.
 
-## 10. RDS Database Module
+## 11. RDS Database Module
 
 A universal, reusable database module (`modules/rds`) that provisions **either** a standard
 `aws_db_instance` **or** an **Aurora cluster** based on a single flag, `use_aurora`.

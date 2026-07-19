@@ -1,4 +1,9 @@
 controller:
+  # Pin a controller image new enough for the :latest plugins below
+  # (configuration-as-code/kubernetes/workflow require Jenkins >= 2.504.1).
+  image:
+    tag: "2.504.1-jdk17"
+
   admin:
     username: admin
     password: admin123

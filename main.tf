@@ -75,10 +75,10 @@ module "eks" {
   subnet_ids = concat(module.vpc.public_subnets, module.vpc.private_subnets)
   # Воркер-ноди — ЛИШЕ в приватних підмережах (вихід в інтернет через NAT Gateway).
   node_subnet_ids = module.vpc.private_subnets
-  instance_type   = "t3.small" # Тип інстансів (вистачає ENI на 6 podів + системні)
-  desired_size    = 2          # Бажана кількість нодів
-  max_size        = 3          # Максимальна кількість нодів
-  min_size        = 1          # Мінімальна кількість нодів
+  instance_type   = "t3.medium" # Тип інстансів (t3.medium = 17 podів/нода — вистачає на Jenkins+ArgoCD+моніторинг)
+  desired_size    = 3           # Бажана кількість нодів
+  max_size        = 4           # Максимальна кількість нодів
+  min_size        = 1           # Мінімальна кількість нодів
 }
 
 module "jenkins" {
@@ -104,6 +104,17 @@ module "argo_cd" {
   }
 }
 
+module "monitoring" {
+  source                 = "./modules/monitoring"
+  namespace              = "monitoring"
+  grafana_admin_password = "admin123"
+
+  providers = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
+}
+
 module "rds" {
   source = "./modules/rds"
 
@@ -112,7 +123,7 @@ module "rds" {
 
   # --- Aurora-only ---
   engine_cluster                = "aurora-postgresql"
-  engine_version_cluster        = "15.3"
+  engine_version_cluster        = "15.17"
   parameter_group_family_aurora = "aurora-postgresql15"
 
 

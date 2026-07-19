@@ -82,3 +82,15 @@ output "rds_security_group_id" {
   description = "Security group ID attached to the database"
   value       = module.rds.security_group_id
 }
+
+#-------------Monitoring-----------------
+
+output "monitoring_namespace" {
+  description = "Namespace of the monitoring stack"
+  value       = module.monitoring.monitoring_namespace
+}
+
+output "grafana_service" {
+  description = "Grafana service (kubectl port-forward -n monitoring svc/grafana 3000:80, admin/admin123)"
+  value       = module.monitoring.grafana_service
+}
