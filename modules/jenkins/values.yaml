@@ -63,6 +63,15 @@ controller:
                           credentials('github-token')
                         }
                         branch('*/final-project')
+                        // Poll only reacts to app-code changes under django/.
+                        // The pipeline's own tag-bump commits touch charts/ only,
+                        // so they are ignored here — this breaks the build->commit->build loop.
+                        extensions {
+                          pathRestriction {
+                            includedRegions('django/.*')
+                            excludedRegions('')
+                          }
+                        }
                       }
                     }
                     scriptPath('Jenkinsfile')
