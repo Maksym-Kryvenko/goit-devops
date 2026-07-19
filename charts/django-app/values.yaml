@@ -1,7 +1,7 @@
 # Образ Django з ECR
 image:
   repository: 495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
-  tag: v1.0.8
+  tag: v1.0.9
   pullPolicy: Always   # tag=latest -> завжди тягнути свіжий образ
 
 # Кількість реплік за замовчуванням (діє коли autoscaling вимкнено)
