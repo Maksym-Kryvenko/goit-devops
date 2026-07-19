@@ -25,7 +25,7 @@ variable "repo_url" {
 variable "target_revision" {
   description = "Git branch/tag/revision to track"
   type        = string
-  default     = "main"
+  default     = "final-project"
 }
 
 variable "chart_path" {
