@@ -65,3 +65,20 @@ output "jenkins_namespace" {
   description = "Namespace of the Jenkins release"
   value       = module.jenkins.jenkins_namespace
 }
+
+#-------------RDS-----------------
+
+output "rds_endpoint" {
+  description = "Writer endpoint of the RDS instance / Aurora cluster"
+  value       = module.rds.endpoint
+}
+
+output "rds_port" {
+  description = "Port the database listens on"
+  value       = module.rds.port
+}
+
+output "rds_security_group_id" {
+  description = "Security group ID attached to the database"
+  value       = module.rds.security_group_id
+}
