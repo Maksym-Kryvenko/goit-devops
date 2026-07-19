@@ -1,3 +1,13 @@
+# Top-level in the Jenkins chart: creates the controller service account.
+# The Kaniko agent pods reference this same SA (jenkins-sa) — its IRSA
+# annotation grants ECR push. Nesting this under `controller:` is ignored
+# by the chart, which is why agent pods failed with "jenkins-sa not found".
+serviceAccount:
+  create: true
+  name: jenkins-sa
+  annotations:
+    eks.amazonaws.com/role-arn: "${kaniko_role_arn}"
+
 controller:
   # Pin a controller image new enough for the :latest plugins below
   # (configuration-as-code/kubernetes/workflow require Jenkins >= 2.504.1).
@@ -14,12 +24,6 @@ controller:
     port: 80
     targetPort: 8080
 
-  serviceAccount:
-    create: true
-    name: jenkins-sa
-    annotations:
-      eks.amazonaws.com/role-arn: "${kaniko_role_arn}"
-      
   resources:
     limits:
       cpu: "500m"
@@ -35,6 +39,37 @@ controller:
   
   JCasC:
     configScripts:
+      credentials-config: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "github-token"
+                      username: "${github_user}"
+                      password: "${github_pat}"
+                      description: "GitHub PAT for CI git push"
+      seed-jobs: |
+        jobs:
+          - script: |
+              pipelineJob('django-app-ci') {
+                definition {
+                  cpsScm {
+                    scm {
+                      git {
+                        remote {
+                          url('https://github.com/Maksym-Kryvenko/goit-devops.git')
+                          credentials('github-token')
+                        }
+                        branch('*/main')
+                      }
+                    }
+                    scriptPath('Jenkinsfile')
+                    lightweight(true)
+                  }
+                }
+              }
       kubernetes-cloud: |
         jenkins:
           clouds:
@@ -69,4 +104,5 @@ controller:
     - credentials-binding:latest
     - github:latest
     - kubernetes:latest
+    - job-dsl:latest
 

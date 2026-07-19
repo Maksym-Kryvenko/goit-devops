@@ -86,6 +86,8 @@ module "jenkins" {
   eks_cluster_name  = module.eks.eks_cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider_url = module.eks.oidc_provider_url
+  github_user       = var.github_user
+  github_pat        = var.github_pat
 
   providers = {
     helm       = helm

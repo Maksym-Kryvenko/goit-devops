@@ -12,6 +12,22 @@ resource "helm_release" "prometheus" {
   version    = var.prometheus_chart_version
 }
 
+# metrics-server serves the metrics.k8s.io API (kubectl top + HPA CPU targets).
+# Without it the django-app HPA reads "cpu: <unknown>" and never scales.
+resource "helm_release" "metrics_server" {
+  name       = "metrics-server"
+  namespace  = "kube-system"
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = var.metrics_server_chart_version
+
+  # EKS kubelet serving certs aren't signed by the cluster CA, so allow insecure TLS.
+  set {
+    name  = "args[0]"
+    value = "--kubelet-insecure-tls"
+  }
+}
+
 resource "helm_release" "grafana" {
   name       = "grafana"
   namespace  = kubernetes_namespace.monitoring.metadata[0].name

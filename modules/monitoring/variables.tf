@@ -16,6 +16,12 @@ variable "grafana_chart_version" {
   default     = "8.5.1"
 }
 
+variable "metrics_server_chart_version" {
+  description = "Helm chart version for metrics-server (serves metrics.k8s.io for HPA)"
+  type        = string
+  default     = "3.12.1"
+}
+
 variable "grafana_admin_password" {
   description = "Grafana admin password"
   type        = string
