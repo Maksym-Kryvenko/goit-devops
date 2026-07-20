@@ -1,7 +1,7 @@
 # Образ Django з ECR.
 image:
   repository: ECR_REPO_PLACEHOLDER
-  tag: v1.0.14
+  tag: v1.0.1
   pullPolicy: Always   # tag=latest -> завжди тягнути свіжий образ
 
 # Кількість реплік за замовчуванням (діє коли autoscaling вимкнено)
