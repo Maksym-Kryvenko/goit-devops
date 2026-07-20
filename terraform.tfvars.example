@@ -1,0 +1,25 @@
+# Copy to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored (*.tfvars) — never commit real secrets.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#   # then edit terraform.tfvars
+#
+# Alternatively export any of these as TF_VAR_<name> environment variables.
+
+# GitHub username for the Jenkins CI git-push credential
+github_user = "your-github-username"
+
+# GitHub Personal Access Token (repo scope) — seeded as the Jenkins 'github-token' credential
+github_pat = "ghp_xxxxxxxxxxxxxxxxxxxx"
+
+# RDS/Aurora master password (alphanumeric recommended; avoid / @ " and spaces)
+db_password = "CHANGE_ME_strong_random"
+
+# Grafana admin password
+grafana_admin_password = "CHANGE_ME_strong_random"
+
+# Jenkins admin password
+jenkins_admin_password = "CHANGE_ME_strong_random"
+
+# Django SECRET_KEY — seeded into the django-app-secret k8s Secret
+django_secret_key = "CHANGE_ME_long_random_50_chars"

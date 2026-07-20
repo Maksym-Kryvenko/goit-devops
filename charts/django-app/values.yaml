@@ -1,6 +1,6 @@
-# Образ Django з ECR
+# Образ Django з ECR.
 image:
-  repository: 495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
+  repository: ECR_REPO_PLACEHOLDER
   tag: v1.0.14
   pullPolicy: Always   # tag=latest -> завжди тягнути свіжий образ
 
@@ -49,21 +49,20 @@ resources:
     cpu: 500m
     memory: 256Mi
 
-# Postgres у кластері (host = config.POSTGRES_HOST). Для homework — emptyDir.
+# In-cluster Postgres вимкнено — застосунок ходить у зовнішній AWS RDS/Aurora.
 postgres:
-  enabled: true
+  enabled: false
   image: postgres:14
 
 # Несекретні змінні середовища -> ConfigMap -> envFrom
 config:
-  POSTGRES_HOST: db
+  POSTGRES_HOST: RDS_ENDPOINT_PLACEHOLDER
   POSTGRES_PORT: "5432"
-  POSTGRES_USER: django_user
-  POSTGRES_DB: django_db
+  POSTGRES_USER: postgres
+  POSTGRES_DB: myapp
   ALLOWED_HOSTS: "*"
   DEBUG: "False"
 
-# Секретні значення -> Secret (kind: Secret) -> envFrom.
+# Terraform створює k8s Secret `django-app-secret`
 secrets:
-  secretKey: "django-insecure-CHANGE-ME"
-  postgresPassword: "your_password_here"
+  external: true

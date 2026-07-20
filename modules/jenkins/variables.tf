@@ -24,3 +24,14 @@ variable "github_pat" {
   type        = string
   sensitive   = true
 }
+
+variable "jenkins_admin_password" {
+  description = "Jenkins admin password (no default — supplied from root var)"
+  type        = string
+  sensitive   = true
+}
+
+variable "ecr_repo_url" {
+  description = "ECR repository URL (module.ecr.repository_url) exposed to the CI pipeline as the ECR_REPO env var"
+  type        = string
+}

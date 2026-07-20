@@ -21,14 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# Беремо з env (у k8s — із Secret через envFrom).
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-n*0a^$*(up4zcqe(l(3af0kaiuc!(l(-egt@)*72oih7nu$cy0'
-)
+# No default — must be supplied via env (in k8s: from a Secret via envFrom).
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Хости беремо з env (ConfigMap у k8s), кома-розділені; за замовч. — локальні
 ALLOWED_HOSTS = os.environ.get(

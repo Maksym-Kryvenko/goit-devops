@@ -82,12 +82,14 @@ module "eks" {
 }
 
 module "jenkins" {
-  source            = "./modules/jenkins"
-  eks_cluster_name  = module.eks.eks_cluster_name
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  oidc_provider_url = module.eks.oidc_provider_url
-  github_user       = var.github_user
-  github_pat        = var.github_pat
+  source                 = "./modules/jenkins"
+  eks_cluster_name       = module.eks.eks_cluster_name
+  oidc_provider_arn      = module.eks.oidc_provider_arn
+  oidc_provider_url      = module.eks.oidc_provider_url
+  github_user            = var.github_user
+  github_pat             = var.github_pat
+  jenkins_admin_password = var.jenkins_admin_password
+  ecr_repo_url           = module.ecr.repository_url
 
   providers = {
     helm       = helm
@@ -110,7 +112,7 @@ module "argo_cd" {
 module "monitoring" {
   source                 = "./modules/monitoring"
   namespace              = "monitoring"
-  grafana_admin_password = "admin123"
+  grafana_admin_password = var.grafana_admin_password
 
   providers = {
     helm       = helm
@@ -140,10 +142,11 @@ module "rds" {
   allocated_storage       = 20
   db_name                 = "myapp"
   username                = "postgres"
-  password                = "admin123AWS23"
+  password                = var.db_password
   subnet_private_ids      = module.vpc.private_subnets
   subnet_public_ids       = module.vpc.public_subnets
-  publicly_accessible     = true
+  publicly_accessible     = false
+  allowed_cidr_blocks     = [module.vpc.vpc_cidr_block]
   vpc_id                  = module.vpc.vpc_id
   multi_az                = true
   backup_retention_period = 7
@@ -157,6 +160,21 @@ module "rds" {
     Environment = "dev"
     Project     = "myapp"
   }
+}
+
+# k8s Secret для Django-застосунку
+resource "kubernetes_secret" "django_app" {
+  metadata {
+    name      = "django-app-secret"
+    namespace = "default"
+  }
+
+  data = {
+    SECRET_KEY        = var.django_secret_key
+    POSTGRES_PASSWORD = var.db_password
+  }
+
+  type = "Opaque"
 }
 
 

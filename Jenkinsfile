@@ -32,12 +32,8 @@ spec:
     }
 
     environment {
-        // ECR registry host — AWS account 495403531175, region eu-north-1
-        // (matches charts/django-app/values.yaml image.repository).
-        ECR_REGISTRY = "495403531175.dkr.ecr.eu-north-1.amazonaws.com"
-        IMAGE_NAME   = "lesson-5-ecr"
-        IMAGE_TAG    = "v1.0.${BUILD_NUMBER}"
-        GIT_REPO     = "github.com/Maksym-Kryvenko/goit-devops.git"
+        IMAGE_TAG = "v1.0.${BUILD_NUMBER}"
+        GIT_REPO  = "github.com/Maksym-Kryvenko/goit-devops.git"
     }
 
     stages {
@@ -51,7 +47,7 @@ spec:
                         /kaniko/executor \
                             --context=dir://${WORKSPACE}/django \
                             --dockerfile=django/Dockerfile \
-                            --destination=${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+                            --destination=${ECR_REPO}:${IMAGE_TAG} \
                             --cache=true
                     '''
                 }

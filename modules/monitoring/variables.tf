@@ -25,6 +25,5 @@ variable "metrics_server_chart_version" {
 variable "grafana_admin_password" {
   description = "Grafana admin password"
   type        = string
-  default     = "admin123"
   sensitive   = true
 }

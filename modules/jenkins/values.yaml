@@ -16,7 +16,7 @@ controller:
 
   admin:
     username: admin
-    password: admin123
+    password: "${jenkins_admin_password}"
 
   serviceType: LoadBalancer
   servicePort: 80
@@ -39,6 +39,13 @@ controller:
   
   JCasC:
     configScripts:
+      env-config: |
+        jenkins:
+          globalNodeProperties:
+            - envVars:
+                env:
+                  - key: "ECR_REPO"
+                    value: "${ecr_repo_url}"
       credentials-config: |
         credentials:
           system:
