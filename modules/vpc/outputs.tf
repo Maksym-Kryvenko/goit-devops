@@ -3,6 +3,11 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
+output "vpc_cidr_block" {
+  description = "CIDR блок VPC (для allowed_cidr_blocks у RDS SG)"
+  value       = aws_vpc.main.cidr_block
+}
+
 output "public_subnets" {
   description = "Список ID публічних підмереж"
   value       = aws_subnet.public[*].id
