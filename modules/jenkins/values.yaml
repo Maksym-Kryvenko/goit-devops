@@ -54,6 +54,11 @@ controller:
         jobs:
           - script: |
               pipelineJob('django-app-ci') {
+                // Define the poll trigger on the job itself so it survives every
+                // re-seed (a Jenkinsfile-only trigger is wiped until the next build).
+                triggers {
+                  scm('* * * * *')
+                }
                 definition {
                   cpsScm {
                     scm {
@@ -63,13 +68,13 @@ controller:
                           credentials('github-token')
                         }
                         branch('*/final-project')
-                        // Poll only reacts to app-code changes under django/.
-                        // The pipeline's own tag-bump commits touch charts/ only,
-                        // so they are ignored here — this breaks the build->commit->build loop.
+                        // Ignore commits confined to charts/ (the pipeline's own
+                        // tag-bump commits) so they don't retrigger a build. Any
+                        // change outside charts/ (i.e. django/ app code) triggers.
                         extensions {
                           pathRestriction {
-                            includedRegions('django/.*')
-                            excludedRegions('')
+                            includedRegions('')
+                            excludedRegions('charts/.*')
                           }
                         }
                       }
