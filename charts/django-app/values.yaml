@@ -56,7 +56,7 @@ postgres:
 
 # Несекретні змінні середовища -> ConfigMap -> envFrom
 config:
-  POSTGRES_HOST: RDS_ENDPOINT_PLACEHOLDER
+  POSTGRES_HOST: myapp-db-cluster.cluster-cl6qsic4iebl.eu-north-1.rds.amazonaws.com
   POSTGRES_PORT: "5432"
   POSTGRES_USER: postgres
   POSTGRES_DB: myapp
