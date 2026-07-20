@@ -3,6 +3,7 @@ datasources:
     apiVersion: 1
     datasources:
       - name: Prometheus
+        uid: prometheus
         type: prometheus
         access: proxy
         url: http://prometheus-server.monitoring.svc:80
@@ -21,11 +22,89 @@ dashboardProviders:
           path: /var/lib/grafana/dashboards/default
 dashboards:
   default:
-    kubernetes-cluster:
-      gnetId: 315
-      revision: 3
-      datasource: Prometheus
+    # Node/cluster metrics — works out of the box with node-exporter.
     node-exporter:
       gnetId: 1860
       revision: 37
       datasource: Prometheus
+    # Hand-built pod + cluster dashboard. Queries verified against this
+    # Prometheus (cadvisor + node-exporter), so panels actually show data
+    # (the old gnetId 315 used stale labels -> "No data").
+    app-pods-cluster:
+      json: |
+        {
+          "annotations": {"list": []},
+          "editable": true,
+          "schemaVersion": 39,
+          "time": {"from": "now-30m", "to": "now"},
+          "timezone": "browser",
+          "title": "App Pods & Cluster",
+          "uid": "app-pods-cluster",
+          "templating": {"list": []},
+          "panels": [
+            {
+              "id": 1,
+              "type": "timeseries",
+              "title": "Pod CPU usage (cores) — namespace default",
+              "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+              "targets": [
+                {
+                  "datasource": {"type": "prometheus", "uid": "prometheus"},
+                  "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\",container!=\"\",container!=\"POD\"}[5m])) by (pod)",
+                  "legendFormat": "{{pod}}",
+                  "refId": "A"
+                }
+              ]
+            },
+            {
+              "id": 2,
+              "type": "timeseries",
+              "title": "Pod memory working set (bytes) — namespace default",
+              "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+              "targets": [
+                {
+                  "datasource": {"type": "prometheus", "uid": "prometheus"},
+                  "expr": "sum(container_memory_working_set_bytes{namespace=\"default\",container!=\"\",container!=\"POD\"}) by (pod)",
+                  "legendFormat": "{{pod}}",
+                  "refId": "A"
+                }
+              ]
+            },
+            {
+              "id": 3,
+              "type": "timeseries",
+              "title": "Cluster CPU utilisation %",
+              "gridPos": {"h": 9, "w": 12, "x": 0, "y": 9},
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "min": 0}, "overrides": []},
+              "targets": [
+                {
+                  "datasource": {"type": "prometheus", "uid": "prometheus"},
+                  "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+                  "legendFormat": "cluster cpu %",
+                  "refId": "A"
+                }
+              ]
+            },
+            {
+              "id": 4,
+              "type": "timeseries",
+              "title": "Cluster memory used %",
+              "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "min": 0}, "overrides": []},
+              "targets": [
+                {
+                  "datasource": {"type": "prometheus", "uid": "prometheus"},
+                  "expr": "100 * (1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes))",
+                  "legendFormat": "cluster mem %",
+                  "refId": "A"
+                }
+              ]
+            }
+          ]
+        }
