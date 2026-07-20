@@ -1,6 +1,6 @@
 # Образ Django з ECR.
 image:
-  repository: ECR_REPO_PLACEHOLDER
+  repository: 495403531175.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
   tag: v1.0.1
   pullPolicy: Always   # tag=latest -> завжди тягнути свіжий образ
 
